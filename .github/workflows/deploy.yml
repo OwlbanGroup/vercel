@@ -4,6 +4,8 @@ on:
     push:
         branches:
             - main # Or your default branch
+            - main
+            - staging
 
 env:
     AWS_REGION: ${{ secrets.AWS_REGION }}
@@ -14,6 +16,30 @@ env:
     CONTAINER_NAME: nestjs-api # The name of the container in the task definition
 
 jobs:
+    set-environment:
+        runs-on: ubuntu-latest
+        outputs:
+            environment: ${{ steps.get-env.outputs.environment }}
+            aws_role_to_assume: ${{ steps.get-env.outputs.aws_role_to_assume }}
+            ecs_cluster: ${{ steps.get-env.outputs.ecs_cluster }}
+            ecs_service: ${{ steps.get-env.outputs.ecs_service }}
+            ecs_task_definition: ${{ steps.get-env.outputs.ecs_task_definition }}
+        steps:
+            - id: get-env
+              run: |
+                  if [[ "${{ github.ref_name }}" == "main" ]]; then
+                      echo "environment=production" >> $GITHUB_OUTPUT
+                      echo "aws_role_to_assume=${{ secrets.AWS_ROLE_TO_ASSUME_PRODUCTION }}" >> $GITHUB_OUTPUT
+                      echo "ecs_cluster=${{ secrets.ECS_CLUSTER_PRODUCTION }}" >> $GITHUB_OUTPUT
+                      echo "ecs_service=${{ secrets.ECS_SERVICE_PRODUCTION }}" >> $GITHUB_OUTPUT
+                      echo "ecs_task_definition=.aws/task-definition-production.json" >> $GITHUB_OUTPUT
+                  elif [[ "${{ github.ref_name }}" == "staging" ]]; then
+                      echo "environment=staging" >> $GITHUB_OUTPUT
+                      echo "aws_role_to_assume=${{ secrets.AWS_ROLE_TO_ASSUME_STAGING }}" >> $GITHUB_OUTPUT
+                      echo "ecs_cluster=${{ secrets.ECS_CLUSTER_STAGING }}" >> $GITHUB_OUTPUT
+                      echo "ecs_service=${{ secrets.ECS_SERVICE_STAGING }}" >> $GITHUB_OUTPUT
+                      echo "ecs_task_definition=.aws/task-definition-staging.json" >> $GITHUB_OUTPUT
+                  fi
     build-and-deploy:
         name: Build and Deploy
         runs-on: ubuntu-latest
@@ -21,8 +47,10 @@ jobs:
         steps:
             - name: Configure AWS credentials
               uses: aws-actions/configure-aws-credentials@v4
+              # Use the dynamically determined role
               with:
                   role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+                  role-to-assume: ${{ needs.set-environment.outputs.aws_role_to_assume }}
                   role-session-name: GitHubActionsSession
                   aws-region: ${{ env.AWS_REGION }}
 
@@ -65,8 +93,10 @@ jobs:
             - name: Render Amazon ECS task definition
               id: render-task-definition
               uses: aws-actions/amazon-ecs-render-task-definition@v1
+              # Use the dynamically determined task definition file
               with:
                   task-definition: ${{ env.ECS_TASK_DEFINITION }}
+                  task-definition: ${{ needs.set-environment.outputs.ecs_task_definition }}
                   container-name: ${{ env.CONTAINER_NAME }}
                   image: ${{ steps.build-image.outputs.image }}
 
@@ -76,4 +106,6 @@ jobs:
                   task-definition: ${{ steps.render-task-definition.outputs.task-definition }}
                   service: ${{ env.ECS_SERVICE }}
                   cluster: ${{ env.ECS_CLUSTER }}
+                  service: ${{ needs.set-environment.outputs.ecs_service }}
+                  cluster: ${{ needs.set-environment.outputs.ecs_cluster }}
                   wait-for-service-stability: true
