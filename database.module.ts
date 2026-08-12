@@ -1,6 +1,7 @@
 import { Module, Global } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PgPoolImpl, MongoDbClientImpl, IoRedisClientImpl } from './database.implementations';
+import { ADMIN_DB_CONNECTION } from './database.interfaces';
 
 @Global() // Make providers available globally without importing this module everywhere
 @Module({
@@ -30,7 +31,16 @@ import { PgPoolImpl, MongoDbClientImpl, IoRedisClientImpl } from './database.imp
       },
       inject: [ConfigService],
     },
+    {
+      provide: ADMIN_DB_CONNECTION,
+      useFactory: (configService: ConfigService) => {
+        const connectionString = configService.get<string>('POSTGRES_ADMIN_URL');
+        // This creates a second, separate instance of PgPoolImpl
+        return new PgPoolImpl(connectionString);
+      },
+      inject: [ConfigService],
+    },
   ],
-  exports: [PgPoolImpl, MongoDbClientImpl, IoRedisClientImpl],
+  exports: [PgPoolImpl, MongoDbClientImpl, IoRedisClientImpl, ADMIN_DB_CONNECTION],
 })
 export class DatabaseModule {}

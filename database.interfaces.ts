@@ -23,3 +23,5 @@ export interface DbPool {
 }
 
 export const DbPoolToken = Symbol("DbPool");
+
+export const ADMIN_DB_CONNECTION = Symbol("AdminDbConnection");

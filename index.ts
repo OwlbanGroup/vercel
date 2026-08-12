@@ -4,8 +4,7 @@
 
 import "reflect-metadata"; // Must be imported once at the top of your entry file
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from './src/app.module';
-import { UserService } from "./src/user/user.service";
+import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
 import { UserService } from "./user.service";
 import { AdminUserService } from './admin-user.service';
@@ -14,10 +13,14 @@ import { AdminUserService } from './admin-user.service';
  * Main application entry point.
  */
 async function bootstrap() {
-  console.log("\n--- Application Startup ---");
-
   // 1. Create NestJS application instance
   const app = await NestFactory.create(AppModule);
+  const configService = app.get(ConfigService);
+  const appMode = configService.get<string>('APP_MODE');
+  const configService = app.get(ConfigService); // General access still works
+  const appMode = configService.get<string>('app.appMode');
+
+  console.log(`\n--- Application Startup (Mode: ${appMode}) ---`);
 
   // 2. Enable graceful shutdown hooks. This will trigger OnApplicationShutdown
   // hooks in providers, ensuring database connections are closed correctly.
@@ -36,6 +39,8 @@ async function bootstrap() {
 
   // 4. Start the application
   const port = process.env.PORT || 3000;
+  // 4. Start the application using the typed config value
+  const port = configService.get<number>('app.port');
   await app.listen(port);
 
   console.log(`\nApplication is running on: ${await app.getUrl()}`);
