@@ -4,6 +4,8 @@
 
 import "reflect-metadata"; // Must be imported once at the top of your entry file
 import { NestFactory } from '@nestjs/core';
+import * as basicAuth from 'express-basic-auth';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
@@ -27,6 +29,32 @@ async function bootstrap() {
 
   // Apply our custom global exception filter
   app.useGlobalFilters(new AllExceptionsFilter());
+
+  // Conditionally apply basic auth to Swagger UI in production
+  if (appMode === 'production') {
+    const swaggerUser = configService.get<string>('SWAGGER_USER');
+    const swaggerPassword = configService.get<string>('SWAGGER_PASSWORD');
+
+    app.use(
+      ['/api', '/api-json'], // The paths to protect
+      basicAuth({
+        challenge: true, // This will cause a popup in the browser
+        users: { [swaggerUser]: swaggerPassword },
+      }),
+    );
+    console.log('[App] Swagger UI is protected with basic authentication.');
+  }
+
+  // Setup Swagger (OpenAPI) documentation
+  const config = new DocumentBuilder()
+    .setTitle('NestJS API')
+    .setDescription('The API description for your NestJS application')
+    .setVersion('1.0')
+    .addTag('claude', 'Endpoints related to Claude AI interactions')
+    .addTag('health', 'Application health check endpoints')
+    .build();
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api', app, document); // Swagger UI will be available at /api
 
   // 2. Enable graceful shutdown hooks. This will trigger OnApplicationShutdown
   // hooks in providers, ensuring database connections are closed correctly.
