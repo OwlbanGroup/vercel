@@ -1,0 +1,79 @@
+name: Deploy to Amazon ECS
+
+on:
+    push:
+        branches:
+            - main # Or your default branch
+
+env:
+    AWS_REGION: ${{ secrets.AWS_REGION }}
+    ECR_REPOSITORY: nestjs-api-repo # The name of your ECR repository
+    ECS_SERVICE: nestjs-api-service # The name of your ECS service
+    ECS_CLUSTER: nestjs-api-cluster # The name of your ECS cluster
+    ECS_TASK_DEFINITION: .aws/task-definition.json # Path to the task definition file
+    CONTAINER_NAME: nestjs-api # The name of the container in the task definition
+
+jobs:
+    build-and-deploy:
+        name: Build and Deploy
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Configure AWS credentials
+              uses: aws-actions/configure-aws-credentials@v4
+              with:
+                  role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+                  role-session-name: GitHubActionsSession
+                  aws-region: ${{ env.AWS_REGION }}
+
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Setup pnpm
+              uses: pnpm/action-setup@v4
+              with:
+                  version: 10 # Match your package.json
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "22"
+                  cache: "pnpm"
+
+            - name: Install dependencies
+              run: pnpm install --frozen-lockfile
+
+            - name: Run linting and tests
+              run: |
+                  pnpm run lint
+                  pnpm run test
+
+            - name: Log in to Amazon ECR
+              id: login-ecr
+              uses: aws-actions/amazon-ecr-login@v2
+
+            - name: Build, tag, and push image to Amazon ECR
+              id: build-image
+              env:
+                  ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+                  IMAGE_TAG: ${{ github.sha }}
+              run: |
+                  docker build -t $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG .
+                  docker push $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG
+                  echo "image=$ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+            - name: Render Amazon ECS task definition
+              id: render-task-definition
+              uses: aws-actions/amazon-ecs-render-task-definition@v1
+              with:
+                  task-definition: ${{ env.ECS_TASK_DEFINITION }}
+                  container-name: ${{ env.CONTAINER_NAME }}
+                  image: ${{ steps.build-image.outputs.image }}
+
+            - name: Deploy Amazon ECS task definition
+              uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+              with:
+                  task-definition: ${{ steps.render-task-definition.outputs.task-definition }}
+                  service: ${{ env.ECS_SERVICE }}
+                  cluster: ${{ env.ECS_CLUSTER }}
+                  wait-for-service-stability: true

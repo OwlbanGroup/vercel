@@ -1,0 +1,47 @@
+{
+  "family": "nestjs-api-service",
+  "containerDefinitions": [
+    {
+      "name": "nestjs-api",
+      "image": "PLACEHOLDER_IMAGE_URI",
+      "cpu": 256,
+      "memory": 512,
+      "portMappings": [
+        {
+          "containerPort": 3000,
+          "protocol": "tcp"
+        }
+      ],
+      "essential": true,
+      "environment": [
+        {
+          "name": "APP_MODE",
+          "value": "production"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "SWAGGER_USER",
+          "valueFrom": "arn:aws:secretsmanager:YOUR_REGION:YOUR_AWS_ACCOUNT_ID:secret:SECRET_NAME_FOR_USER-XXXXXX"
+        },
+        {
+          "name": "SWAGGER_PASSWORD",
+          "valueFrom": "arn:aws:secretsmanager:YOUR_REGION:YOUR_AWS_ACCOUNT_ID:secret:SECRET_NAME_FOR_PASSWORD-XXXXXX"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/nestjs-api-service",
+          "awslogs-region": "YOUR_REGION",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ],
+  "requiresCompatibilities": ["FARGATE"],
+  "networkMode": "awsvpc",
+  "cpu": "256",
+  "memory": "512",
+  "executionRoleArn": "arn:aws:iam::YOUR_AWS_ACCOUNT_ID:role/ecsTaskExecutionRole"
+}

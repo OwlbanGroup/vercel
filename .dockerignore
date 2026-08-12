@@ -1,0 +1,17 @@
+# Git and GitHub files
+.git
+.github
+
+# IDE and environment files
+.vscode
+.env*
+
+# Node dependencies and build artifacts
+node_modules
+dist
+.turbo
+*.log
+
+# OS-specific files
+.DS_Store
+Thumbs.db
