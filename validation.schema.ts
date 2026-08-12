@@ -6,4 +6,5 @@ export const validationSchema = Joi.object({
   POSTGRES_ADMIN_URL: Joi.string().uri().required(),
   MONGO_URL: Joi.string().uri().required(),
   REDIS_URL: Joi.string().uri().required(),
+  ANTHROPIC_API_KEY: Joi.string().required(),
 });

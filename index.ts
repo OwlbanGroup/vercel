@@ -9,7 +9,7 @@ import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
 import { UserService } from "./user.service";
 import { AdminUserService } from './admin-user.service';
-import { ClaudeService } from "./claude.service";
+import { AllExceptionsFilter } from './all-exceptions.filter';
 
 /**
  * Main application entry point.
@@ -25,6 +25,9 @@ async function bootstrap() {
   // Enable global validation pipe
   app.useGlobalPipes(new ValidationPipe());
 
+  // Apply our custom global exception filter
+  app.useGlobalFilters(new AllExceptionsFilter());
+
   // 2. Enable graceful shutdown hooks. This will trigger OnApplicationShutdown
   // hooks in providers, ensuring database connections are closed correctly.
   app.enableShutdownHooks();
@@ -39,11 +42,6 @@ async function bootstrap() {
   const adminUserService = app.get(AdminUserService);
   const admins = await adminUserService.getAdmins();
   console.log("[App] Fetched admins:", admins);
-
-  // The `ClaudeModule` provides the ClaudeService
-  const claudeService = app.get(ClaudeService);
-  const claudeResponse = await claudeService.sendMessage("Hello, Claude! What can you do?");
-  console.log("[App] Claude says:", claudeResponse.content[0].text);
 
   // 4. Start the application
   const port = process.env.PORT || 3000;
