@@ -17,8 +17,6 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
   const appMode = configService.get<string>('APP_MODE');
-  const configService = app.get(ConfigService); // General access still works
-  const appMode = configService.get<string>('app.appMode');
 
   console.log(`\n--- Application Startup (Mode: ${appMode}) ---`);
 
@@ -39,8 +37,6 @@ async function bootstrap() {
 
   // 4. Start the application
   const port = process.env.PORT || 3000;
-  // 4. Start the application using the typed config value
-  const port = configService.get<number>('app.port');
   await app.listen(port);
 
   console.log(`\nApplication is running on: ${await app.getUrl()}`);
