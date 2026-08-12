@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { UserService } from './user.service';
 import { DbPoolToken } from '../database/database.interfaces';
-import { PgPoolImpl } from '../database/database.implementations';
+import { MongoDbClientImpl } from '../database/database.implementations';
 
 @Module({
   // No need to import DatabaseModule if it's global
@@ -9,8 +9,8 @@ import { PgPoolImpl } from '../database/database.implementations';
     UserService,
     {
       provide: DbPoolToken,
-      // Here we specify that UserService gets the PgPoolImpl instance
-      useExisting: PgPoolImpl,
+      // Here we specify that UserService gets the MongoDbClientImpl instance
+      useExisting: MongoDbClientImpl,
     },
   ],
   exports: [UserService],

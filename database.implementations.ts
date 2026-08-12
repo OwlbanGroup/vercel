@@ -14,9 +14,9 @@ export class PgPoolImpl implements DbPool, OnApplicationShutdown {
   private readonly poolName = 'PostgreSQL';
   private connections = 5;
 
-  constructor() {
-    // In a real app, config would be injected here.
-    console.log(`[${this.poolName}] Pool initialized with ${this.connections} connections.`);
+  constructor(connectionString: string) {
+    // In a real app, you'd use the connectionString to connect.
+    console.log(`[${this.poolName}] Pool initialized for: ${connectionString}`);
   }
 
   async end(): Promise<void> {
@@ -40,8 +40,9 @@ export class MongoDbClientImpl implements DbPool, OnApplicationShutdown {
   private readonly clientName = 'MongoDB';
   private isConnected = true;
 
-  constructor() {
-    console.log(`[${this.clientName}] Client initialized and connected.`);
+  constructor(connectionString: string) {
+    // In a real app, you'd use the connectionString to connect.
+    console.log(`[${this.clientName}] Client initialized for: ${connectionString}`);
   }
 
   async close(force = false): Promise<void> {
@@ -65,8 +66,9 @@ export class MongoDbClientImpl implements DbPool, OnApplicationShutdown {
 export class IoRedisClientImpl implements DbPool, OnApplicationShutdown {
   private readonly clientName = 'Redis';
 
-  constructor() {
-    console.log(`[${this.clientName}] Client initialized.`);
+  constructor(connectionString: string) {
+    // In a real app, you'd use the connectionString to connect.
+    console.log(`[${this.clientName}] Client initialized for: ${connectionString}`);
   }
 
   async quit(): Promise<void> {
