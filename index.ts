@@ -4,12 +4,12 @@
 
 import "reflect-metadata"; // Must be imported once at the top of your entry file
 import { NestFactory } from '@nestjs/core';
-pdateimport { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
 import { UserService } from "./user.service";
 import { AdminUserService } from './admin-user.service';
-uimport { ClaudeService } from "./claude.service";
+import { ClaudeService } from "./claude.service";
 
 /**
  * Main application entry point.
