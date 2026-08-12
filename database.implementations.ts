@@ -26,6 +26,15 @@ export class PgPoolImpl implements DbPool, OnApplicationShutdown {
     console.log(`[${this.poolName}] All connections closed.`);
   }
 
+  async query(sql: string): Promise<{ rows: any[] }> {
+    console.log(`[${this.poolName}] Executing health check query: ${sql}`);
+    // In a real app, this would execute the query against the database.
+    // For a health check, 'SELECT 1' is common and should succeed if the
+    // connection is alive. We simulate a successful query.
+    await new Promise(resolve => setTimeout(resolve, 50)); // Simulate network latency
+    return { rows: [{ '?column?': 1 }] };
+  }
+
   onApplicationShutdown(signal?: string) {
     console.log(`[${this.poolName}] Shutdown triggered by ${signal}. Closing pool.`);
     return this.end();

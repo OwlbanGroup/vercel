@@ -7,4 +7,14 @@ export const validationSchema = Joi.object({
   MONGO_URL: Joi.string().uri().required(),
   REDIS_URL: Joi.string().uri().required(),
   ANTHROPIC_API_KEY: Joi.string().required(),
+  SWAGGER_USER: Joi.string().when('APP_MODE', {
+    is: 'production',
+    then: Joi.required(),
+    otherwise: Joi.optional(),
+  }),
+  SWAGGER_PASSWORD: Joi.string().when('APP_MODE', {
+    is: 'production',
+    then: Joi.required(),
+    otherwise: Joi.optional(),
+  }),
 });

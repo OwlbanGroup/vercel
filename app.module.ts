@@ -2,6 +2,8 @@ import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { CacheModule } from '@nestjs/cache-manager';
 import { DatabaseModule } from './database/database.module';
+import { redisStore } from 'cache-manager-redis-yet';
+import type { RedisClientOptions } from 'redis';
 import { UserModule } from './user/user.module';
 import { AdminUserModule } from './admin-user.module';
 import { validationSchema } from './validation.schema';
@@ -12,8 +14,15 @@ import { HealthModule } from './health.module';
 @Module({
   imports: [
     CacheModule.register({
-      isGlobal: true, // Make CacheManager available everywhere without importing CacheModule
-      ttl: 300, // Cache Time To Live in seconds (e.g., 5 minutes)
+      isGlobal: true,
+      useFactory: async (configService: ConfigService) => ({
+        store: redisStore,
+        url: configService.get<string>('REDIS_URL'),
+        ttl: 300, // Cache Time To Live in seconds (e.g., 5 minutes)
+        // Other Redis options can be added here, e.g., password, db, etc.
+        // See https://github.com/dabroek/node-cache-manager-redis-yet#options
+      }),
+      inject: [ConfigService],
     }),
     ConfigModule.forRoot({
       isGlobal: true, // Make ConfigService available everywhere
