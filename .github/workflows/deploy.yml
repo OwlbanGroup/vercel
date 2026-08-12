@@ -1,66 +1,27 @@
-name: Deploy to Amazon ECS
+name: Deploy to Vercel
 
 on:
     push:
         branches:
-            - main # Or your default branch
             - main
             - staging
 
 env:
-    AWS_REGION: ${{ secrets.AWS_REGION }}
-    ECR_REPOSITORY: nestjs-api-repo # The name of your ECR repository
-    ECS_SERVICE: nestjs-api-service # The name of your ECS service
-    ECS_CLUSTER: nestjs-api-cluster # The name of your ECS cluster
-    ECS_TASK_DEFINITION: .aws/task-definition.json # Path to the task definition file
-    CONTAINER_NAME: nestjs-api # The name of the container in the task definition
+    VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+    VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
 jobs:
-    set-environment:
+    deploy:
+        name: Deploy to Vercel
         runs-on: ubuntu-latest
-        outputs:
-            environment: ${{ steps.get-env.outputs.environment }}
-            aws_role_to_assume: ${{ steps.get-env.outputs.aws_role_to_assume }}
-            ecs_cluster: ${{ steps.get-env.outputs.ecs_cluster }}
-            ecs_service: ${{ steps.get-env.outputs.ecs_service }}
-            ecs_task_definition: ${{ steps.get-env.outputs.ecs_task_definition }}
         steps:
-            - id: get-env
-              run: |
-                  if [[ "${{ github.ref_name }}" == "main" ]]; then
-                      echo "environment=production" >> $GITHUB_OUTPUT
-                      echo "aws_role_to_assume=${{ secrets.AWS_ROLE_TO_ASSUME_PRODUCTION }}" >> $GITHUB_OUTPUT
-                      echo "ecs_cluster=${{ secrets.ECS_CLUSTER_PRODUCTION }}" >> $GITHUB_OUTPUT
-                      echo "ecs_service=${{ secrets.ECS_SERVICE_PRODUCTION }}" >> $GITHUB_OUTPUT
-                      echo "ecs_task_definition=.aws/task-definition-production.json" >> $GITHUB_OUTPUT
-                  elif [[ "${{ github.ref_name }}" == "staging" ]]; then
-                      echo "environment=staging" >> $GITHUB_OUTPUT
-                      echo "aws_role_to_assume=${{ secrets.AWS_ROLE_TO_ASSUME_STAGING }}" >> $GITHUB_OUTPUT
-                      echo "ecs_cluster=${{ secrets.ECS_CLUSTER_STAGING }}" >> $GITHUB_OUTPUT
-                      echo "ecs_service=${{ secrets.ECS_SERVICE_STAGING }}" >> $GITHUB_OUTPUT
-                      echo "ecs_task_definition=.aws/task-definition-staging.json" >> $GITHUB_OUTPUT
-                  fi
-    build-and-deploy:
-        name: Build and Deploy
-        runs-on: ubuntu-latest
-
-        steps:
-            - name: Configure AWS credentials
-              uses: aws-actions/configure-aws-credentials@v4
-              # Use the dynamically determined role
-              with:
-                  role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
-                  role-to-assume: ${{ needs.set-environment.outputs.aws_role_to_assume }}
-                  role-session-name: GitHubActionsSession
-                  aws-region: ${{ env.AWS_REGION }}
-
             - name: Checkout code
               uses: actions/checkout@v4
 
             - name: Setup pnpm
               uses: pnpm/action-setup@v4
               with:
-                  version: 10 # Match your package.json
+                  version: 10
 
             - name: Setup Node.js
               uses: actions/setup-node@v4
@@ -68,44 +29,19 @@ jobs:
                   node-version: "22"
                   cache: "pnpm"
 
-            - name: Install dependencies
-              run: pnpm install --frozen-lockfile
+            - name: Install Vercel CLI
+              run: npm install --global vercel@latest
 
-            - name: Run linting and tests
+            - name: Pull Vercel Environment Information
+              run: vercel pull --yes --environment=${{ github.ref_name == 'main' && 'production' || 'preview' }} --token=${{ secrets.VERCEL_TOKEN }}
+
+            - name: Build Project Artifacts
+              run: vercel build ${{ github.ref_name == 'main' && '--prod' || '' }} --token=${{ secrets.VERCEL_TOKEN }}
+
+            - name: Deploy Project Artifacts to Vercel
               run: |
-                  pnpm run lint
-                  pnpm run test
-
-            - name: Log in to Amazon ECR
-              id: login-ecr
-              uses: aws-actions/amazon-ecr-login@v2
-
-            - name: Build, tag, and push image to Amazon ECR
-              id: build-image
-              env:
-                  ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-                  IMAGE_TAG: ${{ github.sha }}
-              run: |
-                  docker build -t $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG .
-                  docker push $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG
-                  echo "image=$ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG" >> $GITHUB_OUTPUT
-
-            - name: Render Amazon ECS task definition
-              id: render-task-definition
-              uses: aws-actions/amazon-ecs-render-task-definition@v1
-              # Use the dynamically determined task definition file
-              with:
-                  task-definition: ${{ env.ECS_TASK_DEFINITION }}
-                  task-definition: ${{ needs.set-environment.outputs.ecs_task_definition }}
-                  container-name: ${{ env.CONTAINER_NAME }}
-                  image: ${{ steps.build-image.outputs.image }}
-
-            - name: Deploy Amazon ECS task definition
-              uses: aws-actions/amazon-ecs-deploy-task-definition@v1
-              with:
-                  task-definition: ${{ steps.render-task-definition.outputs.task-definition }}
-                  service: ${{ env.ECS_SERVICE }}
-                  cluster: ${{ env.ECS_CLUSTER }}
-                  service: ${{ needs.set-environment.outputs.ecs_service }}
-                  cluster: ${{ needs.set-environment.outputs.ecs_cluster }}
-                  wait-for-service-stability: true
+                  if [[ "${{ github.ref_name }}" == "main" ]]; then
+                    vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+                  else
+                    vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
+                  fi

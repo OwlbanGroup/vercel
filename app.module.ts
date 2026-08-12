@@ -9,6 +9,7 @@ import { AdminUserModule } from './admin-user.module';
 import { validationSchema } from './validation.schema';
 import { ClaudeModule } from './claude.module';
 import { LoggerMiddleware } from './logger.middleware';
+import { AuthModule } from './auth/auth.module';
 import { HealthModule } from './health.module';
 
 @Module({
@@ -34,6 +35,7 @@ import { HealthModule } from './health.module';
     UserModule,     // Provides UserService and configures its DB dependency
     AdminUserModule, // Provides AdminUserService and configures its DB dependency
     ClaudeModule,
+    AuthModule,
     HealthModule,
   ],
 })
